@@ -269,7 +269,6 @@ func (tr *TRand) RandRawBlock(setNil bool) *RawBlock {
 			Body: &RawBody{
 				Uncles:      nil,
 				Withdrawals: nil,
-				// Deposits:     nil,
 			},
 		}
 	}
@@ -285,6 +284,14 @@ func (tr *TRand) RandBody() *Body {
 		Transactions: tr.RandTransactions(tr.RandIntInRange(1, 6)),
 		Uncles:       tr.RandHeaders(tr.RandIntInRange(1, 6)),
 		Withdrawals:  tr.RandWithdrawals(tr.RandIntInRange(1, 6)),
+	}
+}
+
+func (tr *TRand) RandLog() *Log {
+	return &Log{
+		Address: tr.RandAddress(),
+		Topics:  tr.RandHashes(tr.RandIntInRange(1, 5)),
+		Data:    tr.RandBytes(tr.RandIntInRange(32, 1024)),
 	}
 }
 
@@ -414,6 +421,45 @@ func compareBodies(t *testing.T, a, b *Body) error {
 	return nil
 }
 
+func compareLogs(t *testing.T, a, b *Log) error {
+
+	for i := 0; i < 20; i++ {
+		if a.Address[i] != b.Address[i] {
+			return fmt.Errorf("addresses mismatch at idx=%v: %v != %v", i, a.Address[i], b.Address[i])
+		}
+	}
+
+	atLen, btLen := len(a.Topics), len(b.Topics)
+	if atLen != btLen {
+		return fmt.Errorf("topics len mismatch: expected: %v, got: %v", atLen, btLen)
+	}
+
+	for i := 0; i < atLen; i++ {
+		if len(a.Topics[i]) != 32 || len(b.Topics[i]) != 32 {
+			return fmt.Errorf("topic len != 32: topic idx=%v,  len(a.Topics[i])=%v, len(b.Topics[i])=%v", i, len(a.Topics[i]), len(b.Topics[i]))
+		}
+
+		for j := 0; j < 32; j++ {
+			if a.Topics[i][j] != b.Topics[i][j] {
+				return fmt.Errorf("topic mismatch at idx: %v, a.Topics[i]=0x%x, b.Topics[i]=0x%x", i, a.Topics[i], b.Topics[i])
+			}
+		}
+	}
+
+	adLen, bdLen := len(a.Data), len(b.Data)
+	if adLen != bdLen {
+		return fmt.Errorf("data len mismatch: expected: %v, got: %v", adLen, bdLen)
+	}
+
+	for i := 0; i < adLen; i++ {
+		if a.Data[i] != b.Data[i] {
+			return fmt.Errorf("data len mismatch: expected: %v, got: %v", a.Data, b.Data)
+		}
+	}
+
+	return nil
+}
+
 // func TestRawBodyEncodeDecodeRLP(t *testing.T) {
 // 	tr := NewTRand()
 // 	var buf bytes.Buffer
@@ -458,5 +504,68 @@ func TestBodyEncodeDecodeRLP(t *testing.T) {
 		if err := compareBodies(t, enc, dec); err != nil {
 			t.Errorf("error: compareBodies: %v", err)
 		}
+	}
+}
+
+func TestLogEncodeDecodeRLP(t *testing.T) {
+	tr := NewTRand()
+	var buf bytes.Buffer
+	for i := 0; i < RUNS; i++ {
+		enc := tr.RandLog()
+		buf.Reset()
+		if err := enc.encodeRLP(&buf); err != nil {
+			t.Errorf("error: Log.EncodeRLP(): %v", err)
+		}
+
+		s := rlp.NewStream(bytes.NewReader(buf.Bytes()), 0)
+		dec := &Log{}
+		if err := dec.decodeRLP(s); err != nil {
+			t.Errorf("error: Log.DecodeRLP(): %v", err)
+			panic(err)
+		}
+
+		if err := compareLogs(t, enc, dec); err != nil {
+			t.Errorf("error: compareLogs: %v", err)
+		}
+	}
+}
+
+func BenchmarkLogRLP(b *testing.B) {
+	var buf bytes.Buffer
+
+	log := Log{
+		Address: libcommon.Address{0, 228, 187, 88, 112, 28, 134, 47, 206, 54, 177, 18, 153, 224, 225, 161, 117, 171, 179, 19},
+		Topics: []libcommon.Hash{
+			{138, 91, 92, 35, 250, 86, 72, 255, 246, 187, 191, 125, 101, 9, 197, 162, 185, 195, 68, 158, 58, 117, 71, 235, 223, 42, 164, 228, 186, 1, 191, 251},
+			{99, 152, 198, 160, 131, 168, 53, 118, 35, 56, 133, 204, 248, 97, 69, 115, 118, 30, 54, 137, 245, 42, 250, 247, 106, 170, 220, 153, 124, 196, 252, 141},
+			{147, 75, 108, 218, 217, 46, 137, 51, 47, 101, 196, 161, 156, 205, 72, 108, 31, 140, 141, 208, 80, 139, 198, 240, 99, 63, 1, 231, 63, 131, 26, 118},
+		},
+		Data: []byte{125, 55, 122, 143, 112, 122, 217, 166, 140, 91, 233, 185, 152, 62, 232, 17, 13, 108, 103, 194, 180, 0, 29, 122, 165, 63, 85, 238, 28, 208, 38, 129, 133, 196, 209, 123, 20, 143, 158, 215, 106, 171, 222, 72, 123, 51, 200, 92, 7, 78, 210, 122, 7, 109, 118, 192, 243, 1, 135, 163, 156, 16, 107, 198, 70, 12, 45, 231, 216, 85, 34, 126, 245, 169, 122, 29, 21, 171, 175, 174, 96, 38, 83, 77, 245, 99, 63, 127, 46, 132, 82, 44, 98, 123, 165, 137, 125, 195, 77, 117, 120, 173, 165, 236, 194, 138, 130, 198, 141, 8, 119, 69, 109, 50, 16, 203, 193, 128, 132, 167, 237, 68, 67, 190},
+	}
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		buf.Reset()
+		log.encodeRLP(&buf)
+	}
+}
+
+func BenchmarkLogRLPgen(b *testing.B) {
+	var buf bytes.Buffer
+
+	log := Log{
+		Address: libcommon.Address{0, 228, 187, 88, 112, 28, 134, 47, 206, 54, 177, 18, 153, 224, 225, 161, 117, 171, 179, 19},
+		Topics: []libcommon.Hash{
+			{138, 91, 92, 35, 250, 86, 72, 255, 246, 187, 191, 125, 101, 9, 197, 162, 185, 195, 68, 158, 58, 117, 71, 235, 223, 42, 164, 228, 186, 1, 191, 251},
+			{99, 152, 198, 160, 131, 168, 53, 118, 35, 56, 133, 204, 248, 97, 69, 115, 118, 30, 54, 137, 245, 42, 250, 247, 106, 170, 220, 153, 124, 196, 252, 141},
+			{147, 75, 108, 218, 217, 46, 137, 51, 47, 101, 196, 161, 156, 205, 72, 108, 31, 140, 141, 208, 80, 139, 198, 240, 99, 63, 1, 231, 63, 131, 26, 118},
+		},
+		Data: []byte{125, 55, 122, 143, 112, 122, 217, 166, 140, 91, 233, 185, 152, 62, 232, 17, 13, 108, 103, 194, 180, 0, 29, 122, 165, 63, 85, 238, 28, 208, 38, 129, 133, 196, 209, 123, 20, 143, 158, 215, 106, 171, 222, 72, 123, 51, 200, 92, 7, 78, 210, 122, 7, 109, 118, 192, 243, 1, 135, 163, 156, 16, 107, 198, 70, 12, 45, 231, 216, 85, 34, 126, 245, 169, 122, 29, 21, 171, 175, 174, 96, 38, 83, 77, 245, 99, 63, 127, 46, 132, 82, 44, 98, 123, 165, 137, 125, 195, 77, 117, 120, 173, 165, 236, 194, 138, 130, 198, 141, 8, 119, 69, 109, 50, 16, 203, 193, 128, 132, 167, 237, 68, 67, 190},
+	}
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		buf.Reset()
+		log.EncodeRLP(&buf)
 	}
 }
