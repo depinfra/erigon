@@ -516,7 +516,7 @@ func TestLogEncodeDecodeRLP(t *testing.T) {
 		if err := enc.encodeRLP(&buf); err != nil {
 			t.Errorf("error: Log.EncodeRLP(): %v", err)
 		}
-		fmt.Println(buf.Bytes())
+
 		s := rlp.NewStream(bytes.NewReader(buf.Bytes()), 0)
 		dec := &Log{}
 		if err := dec.decodeRLP(s); err != nil {

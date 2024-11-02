@@ -977,29 +977,3 @@ func (l *Log) decodeRLP(s *rlp.Stream) error {
 
 	return s.ListEnd()
 }
-
-// // Consensus fields:
-// // address of the contract that generated the event
-// Address libcommon.Address `json:"address" gencodec:"required" codec:"1"`
-// // list of topics provided by the contract.
-// Topics []libcommon.Hash `json:"topics" gencodec:"required" codec:"2"`
-// // supplied by the contract, usually ABI-encoded
-// Data []byte `json:"data" gencodec:"required" codec:"3"`
-
-// // Derived fields. These fields are filled in by the node
-// // but not secured by consensus.
-// // block in which the transaction was included
-// BlockNumber uint64 `json:"blockNumber" codec:"-"`
-
-// // hash of the transaction
-// TxHash libcommon.Hash `json:"transactionHash" gencodec:"required" codec:"-"`
-// // index of the transaction in the block
-// TxIndex uint `json:"transactionIndex" codec:"-"`
-// // hash of the block in which the transaction was included
-// BlockHash libcommon.Hash `json:"blockHash" codec:"-"`
-// // index of the log in the block
-// Index uint `json:"logIndex" codec:"-"`
-
-// // The Removed field is true if this log was reverted due to a chain reorganisation.
-// // You must pay attention to this field if you receive logs through a filter query.
-// Removed bool `json:"removed" codec:"-"`
