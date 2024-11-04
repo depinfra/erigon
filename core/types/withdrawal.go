@@ -25,6 +25,7 @@ import (
 	"io"
 
 	"github.com/erigontech/erigon-lib/common/hexutil"
+	rlp2 "github.com/erigontech/erigon-lib/rlp"
 
 	libcommon "github.com/erigontech/erigon-lib/common"
 	"github.com/erigontech/erigon-lib/types/clonable"
@@ -45,11 +46,11 @@ type Withdrawal struct {
 func (obj *Withdrawal) EncodingSize() int {
 	encodingSize := 21 /* Address */
 	encodingSize++
-	encodingSize += rlp.IntLenExcludingHead(obj.Index)
+	encodingSize += rlp2.IntLenExcludingHead(obj.Index)
 	encodingSize++
-	encodingSize += rlp.IntLenExcludingHead(obj.Validator)
+	encodingSize += rlp2.IntLenExcludingHead(obj.Validator)
 	encodingSize++
-	encodingSize += rlp.IntLenExcludingHead(obj.Amount)
+	encodingSize += rlp2.IntLenExcludingHead(obj.Amount)
 	return encodingSize
 }
 
@@ -61,10 +62,10 @@ func (obj *Withdrawal) EncodeRLP(w io.Writer) error {
 		return err
 	}
 
-	if err := rlp.EncodeInt(obj.Index, w, b[:]); err != nil {
+	if err := rlp2.EncodeInt(obj.Index, w, b[:]); err != nil {
 		return err
 	}
-	if err := rlp.EncodeInt(obj.Validator, w, b[:]); err != nil {
+	if err := rlp2.EncodeInt(obj.Validator, w, b[:]); err != nil {
 		return err
 	}
 
@@ -76,7 +77,7 @@ func (obj *Withdrawal) EncodeRLP(w io.Writer) error {
 		return err
 	}
 
-	return rlp.EncodeInt(obj.Amount, w, b[:])
+	return rlp2.EncodeInt(obj.Amount, w, b[:])
 }
 
 func (obj *Withdrawal) DecodeRLP(s *rlp.Stream) error {

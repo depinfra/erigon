@@ -194,28 +194,28 @@ func (tx *LegacyTx) EncodingSize() int {
 
 func (tx *LegacyTx) payloadSize() (payloadSize int, nonceLen, gasLen int) {
 	payloadSize++
-	nonceLen = rlp.IntLenExcludingHead(tx.Nonce)
+	nonceLen = rlp2.IntLenExcludingHead(tx.Nonce)
 	payloadSize += nonceLen
 	payloadSize++
-	payloadSize += rlp.Uint256LenExcludingHead(tx.GasPrice)
+	payloadSize += rlp2.Uint256LenExcludingHead(tx.GasPrice)
 	payloadSize++
-	gasLen = rlp.IntLenExcludingHead(tx.Gas)
+	gasLen = rlp2.IntLenExcludingHead(tx.Gas)
 	payloadSize += gasLen
 	payloadSize++
 	if tx.To != nil {
 		payloadSize += 20
 	}
 	payloadSize++
-	payloadSize += rlp.Uint256LenExcludingHead(tx.Value)
+	payloadSize += rlp2.Uint256LenExcludingHead(tx.Value)
 	// size of Data
 	payloadSize += rlp2.StringLen(tx.Data)
 	// size of V
 	payloadSize++
-	payloadSize += rlp.Uint256LenExcludingHead(&tx.V)
+	payloadSize += rlp2.Uint256LenExcludingHead(&tx.V)
 	payloadSize++
-	payloadSize += rlp.Uint256LenExcludingHead(&tx.R)
+	payloadSize += rlp2.Uint256LenExcludingHead(&tx.R)
 	payloadSize++
-	payloadSize += rlp.Uint256LenExcludingHead(&tx.S)
+	payloadSize += rlp2.Uint256LenExcludingHead(&tx.S)
 	return payloadSize, nonceLen, gasLen
 }
 
@@ -248,7 +248,7 @@ func (tx *LegacyTx) encodePayload(w io.Writer, b []byte, payloadSize, nonceLen, 
 	if err := tx.GasPrice.EncodeRLP(w); err != nil {
 		return err
 	}
-	if err := rlp.EncodeInt(tx.Gas, w, b); err != nil {
+	if err := rlp2.EncodeInt(tx.Gas, w, b); err != nil {
 		return err
 	}
 	if tx.To == nil {
@@ -267,7 +267,7 @@ func (tx *LegacyTx) encodePayload(w io.Writer, b []byte, payloadSize, nonceLen, 
 	if err := tx.Value.EncodeRLP(w); err != nil {
 		return err
 	}
-	if err := rlp.EncodeString(tx.Data, w, b); err != nil {
+	if err := rlp2.EncodeStringToWriter(tx.Data, w, b); err != nil {
 		return err
 	}
 	if err := tx.V.EncodeRLP(w); err != nil {

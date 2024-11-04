@@ -295,6 +295,23 @@ func (tr *TRand) RandLog() *Log {
 	}
 }
 
+func (tr *TRand) RandReceiptForStorage() *ReceiptForStorage {
+	logs := []*Log{}
+	logN := tr.RandIntInRange(0, 5)
+	for i := 0; i < logN; i++ {
+		_log := tr.RandLog()
+		_log.Index = uint(tr.RandIntInRange(1, 5))
+		logs = append(logs, _log)
+	}
+	return &ReceiptForStorage{
+		Logs:              logs,
+		CumulativeGasUsed: *tr.RandUint64(),
+		// Address: tr.RandAddress(),
+		// Topics:  tr.RandHashes(tr.RandIntInRange(1, 5)),
+		// Data:    tr.RandBytes(tr.RandIntInRange(32, 1024)),
+	}
+}
+
 func isEqualBytes(a, b []byte) bool {
 	for i := range a {
 		if a[i] != b[i] {
@@ -460,6 +477,26 @@ func compareLogs(t *testing.T, a, b *Log) error {
 	return nil
 }
 
+func compareReceiptForStorage(t *testing.T, a, b *ReceiptForStorage) error {
+
+	if a.Status != b.Status {
+		return fmt.Errorf("Status mismatch: expected: %v, got: %v", a.Status, b.Status)
+	}
+
+	check(t, "ReceiptForStorage.PostState", a.PostState, b.PostState)
+
+	if a.CumulativeGasUsed != b.CumulativeGasUsed {
+		return fmt.Errorf("CumulativeGasUsed mismatch: expected: %v, got: %v", a.CumulativeGasUsed, b.CumulativeGasUsed)
+	}
+	if len(a.Logs) > 0 {
+		if a.Logs[0].Index != uint(b.FirstLogIndexWithinBlock) {
+			return fmt.Errorf("FirstLogIndexWithinBlock mismatch: expected %v, got: %v", a.Logs[0].Index, b.FirstLogIndexWithinBlock)
+		}
+	}
+
+	return nil
+}
+
 // func TestRawBodyEncodeDecodeRLP(t *testing.T) {
 // 	tr := NewTRand()
 // 	var buf bytes.Buffer
@@ -575,5 +612,28 @@ func BenchmarkLogDecodeRLPgen(b *testing.B) {
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		dec.DecodeRLP(s)
+	}
+}
+
+func TestReceiptForStorageEncodeDecodeRLP(t *testing.T) {
+	tr := NewTRand()
+	var buf bytes.Buffer
+	for i := 0; i < RUNS; i++ {
+		enc := tr.RandReceiptForStorage()
+		buf.Reset()
+		if err := enc.encodeRLP(&buf); err != nil {
+			t.Errorf("error: ReceiptForStorage.EncodeRLP(): %v", err)
+		}
+
+		s := rlp.NewStream(bytes.NewReader(buf.Bytes()), 0)
+		dec := &ReceiptForStorage{}
+		if err := dec.decodeRLP(s); err != nil {
+			t.Errorf("error: ReceiptForStorage.DecodeRLP(): %v", err)
+			panic(err)
+		}
+
+		if err := compareReceiptForStorage(t, enc, dec); err != nil {
+			t.Errorf("error: compareReceiptForStorage: %v", err)
+		}
 	}
 }

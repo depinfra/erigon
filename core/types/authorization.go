@@ -38,7 +38,7 @@ func (ath *Authorization) copy() *Authorization {
 }
 
 func (ath *Authorization) RecoverSigner(data *bytes.Buffer, b []byte) (*libcommon.Address, error) {
-	authLen := 1 + rlp.Uint256LenExcludingHead(ath.ChainID)
+	authLen := 1 + rlp2.Uint256LenExcludingHead(ath.ChainID)
 	authLen += (1 + length.Addr)
 	authLen += rlp2.U64Len(ath.Nonce)
 
@@ -51,11 +51,11 @@ func (ath *Authorization) RecoverSigner(data *bytes.Buffer, b []byte) (*libcommo
 		return nil, err
 	}
 
-	if err := rlp.EncodeOptionalAddress(&ath.Address, data, b); err != nil {
+	if err := rlp2.EncodeOptionalAddress(&ath.Address, data, b); err != nil {
 		return nil, err
 	}
 
-	if err := rlp.EncodeInt(ath.Nonce, data, b); err != nil {
+	if err := rlp2.EncodeInt(ath.Nonce, data, b); err != nil {
 		return nil, err
 	}
 
@@ -103,11 +103,11 @@ func (ath *Authorization) RecoverSigner(data *bytes.Buffer, b []byte) (*libcommo
 }
 
 func authorizationSize(auth Authorization) (authLen int) {
-	authLen = 1 + rlp.Uint256LenExcludingHead(auth.ChainID)
+	authLen = 1 + rlp2.Uint256LenExcludingHead(auth.ChainID)
 	authLen += rlp2.U64Len(auth.Nonce)
 	authLen += (1 + length.Addr)
 
-	authLen += (1 + rlp.Uint256LenExcludingHead(&auth.V)) + (1 + rlp.Uint256LenExcludingHead(&auth.R)) + (1 + rlp.Uint256LenExcludingHead(&auth.S))
+	authLen += (1 + rlp2.Uint256LenExcludingHead(&auth.V)) + (1 + rlp2.Uint256LenExcludingHead(&auth.R)) + (1 + rlp2.Uint256LenExcludingHead(&auth.S))
 
 	return
 }
@@ -199,11 +199,11 @@ func encodeAuthorizations(authorizations []Authorization, w io.Writer, b []byte)
 			return err
 		}
 		// 2. encode Address
-		if err := rlp.EncodeOptionalAddress(&auth.Address, w, b); err != nil {
+		if err := rlp2.EncodeOptionalAddress(&auth.Address, w, b); err != nil {
 			return err
 		}
 		// 3. encode Nonce
-		if err := rlp.EncodeInt(auth.Nonce, w, b); err != nil {
+		if err := rlp2.EncodeInt(auth.Nonce, w, b); err != nil {
 			return err
 		}
 		// 4. encode V, R, S

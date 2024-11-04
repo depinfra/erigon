@@ -30,6 +30,7 @@ import (
 	libcommon "github.com/erigontech/erigon-lib/common"
 	"github.com/erigontech/erigon-lib/common/fixedgas"
 	libkzg "github.com/erigontech/erigon-lib/crypto/kzg"
+	rlp2 "github.com/erigontech/erigon-lib/rlp"
 	types2 "github.com/erigontech/erigon-lib/types"
 
 	"github.com/erigontech/erigon/rlp"
@@ -82,7 +83,7 @@ func (li BlobKzgs) encodePayload(w io.Writer, b []byte, payloadSize int) error {
 	}
 
 	for _, cmtmt := range li {
-		if err := rlp.EncodeString(cmtmt[:], w, b); err != nil {
+		if err := rlp2.EncodeStringToWriter(cmtmt[:], w, b); err != nil {
 			return err
 		}
 	}
@@ -132,7 +133,7 @@ func (li KZGProofs) encodePayload(w io.Writer, b []byte, payloadSize int) error 
 	}
 
 	for _, proof := range li {
-		if err := rlp.EncodeString(proof[:], w, b); err != nil {
+		if err := rlp2.EncodeStringToWriter(proof[:], w, b); err != nil {
 			return err
 		}
 	}
@@ -186,7 +187,7 @@ func (blobs Blobs) encodePayload(w io.Writer, b []byte, payloadSize int) error {
 	}
 
 	for _, blob := range blobs {
-		if err := rlp.EncodeString(blob[:], w, b); err != nil {
+		if err := rlp2.EncodeStringToWriter(blob[:], w, b); err != nil {
 			return err
 		}
 	}

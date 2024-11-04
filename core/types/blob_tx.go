@@ -168,7 +168,7 @@ func (stx *BlobTx) payloadSize() (payloadSize, nonceLen, gasLen, accessListLen, 
 	payloadSize, nonceLen, gasLen, accessListLen = stx.DynamicFeeTransaction.payloadSize()
 	// size of MaxFeePerBlobGas
 	payloadSize++
-	payloadSize += rlp.Uint256LenExcludingHead(stx.MaxFeePerBlobGas)
+	payloadSize += rlp2.Uint256LenExcludingHead(stx.MaxFeePerBlobGas)
 	// size of BlobVersionedHashes
 	blobHashesLen = blobVersionedHashesSize(stx.BlobVersionedHashes)
 	payloadSize += rlp2.ListPrefixLen(blobHashesLen) + blobHashesLen
@@ -181,7 +181,7 @@ func blobVersionedHashesSize(hashes []libcommon.Hash) int {
 
 func encodeBlobVersionedHashes(hashes []libcommon.Hash, w io.Writer, b []byte) error {
 	for _, h := range hashes {
-		if err := rlp.EncodeString(h[:], w, b); err != nil {
+		if err := rlp2.EncodeStringToWriter(h[:], w, b); err != nil {
 			return err
 		}
 	}
@@ -198,7 +198,7 @@ func (stx *BlobTx) encodePayload(w io.Writer, b []byte, payloadSize, nonceLen, g
 		return err
 	}
 	// encode Nonce
-	if err := rlp.EncodeInt(stx.Nonce, w, b); err != nil {
+	if err := rlp2.EncodeInt(stx.Nonce, w, b); err != nil {
 		return err
 	}
 	// encode MaxPriorityFeePerGas
@@ -210,7 +210,7 @@ func (stx *BlobTx) encodePayload(w io.Writer, b []byte, payloadSize, nonceLen, g
 		return err
 	}
 	// encode Gas
-	if err := rlp.EncodeInt(stx.Gas, w, b); err != nil {
+	if err := rlp2.EncodeInt(stx.Gas, w, b); err != nil {
 		return err
 	}
 	// encode To
@@ -226,7 +226,7 @@ func (stx *BlobTx) encodePayload(w io.Writer, b []byte, payloadSize, nonceLen, g
 		return err
 	}
 	// encode Data
-	if err := rlp.EncodeString(stx.Data, w, b); err != nil {
+	if err := rlp2.EncodeStringToWriter(stx.Data, w, b); err != nil {
 		return err
 	}
 	// prefix
@@ -270,7 +270,7 @@ func (stx *BlobTx) EncodeRLP(w io.Writer) error {
 	envelopeSize := 1 + rlp2.ListPrefixLen(payloadSize) + payloadSize
 	var b [33]byte
 	// envelope
-	if err := rlp.EncodeStringSizePrefix(envelopeSize, w, b[:]); err != nil {
+	if err := rlp2.EncodeStringSizePrefix(envelopeSize, w, b[:]); err != nil {
 		return err
 	}
 	// encode TxType

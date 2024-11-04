@@ -190,7 +190,7 @@ func (tx *SetCodeTransaction) EncodeRLP(w io.Writer) error {
 	envelopSize := 1 + rlp2.ListPrefixLen(payloadSize) + payloadSize
 	var b [33]byte
 	// encode envelope size
-	if err := rlp.EncodeStringSizePrefix(envelopSize, w, b[:]); err != nil {
+	if err := rlp2.EncodeStringSizePrefix(envelopSize, w, b[:]); err != nil {
 		return err
 	}
 	// encode TxType
@@ -279,7 +279,7 @@ func (tx *SetCodeTransaction) encodePayload(w io.Writer, b []byte, payloadSize, 
 		return err
 	}
 	// encode Nonce
-	if err := rlp.EncodeInt(tx.Nonce, w, b); err != nil {
+	if err := rlp2.EncodeInt(tx.Nonce, w, b); err != nil {
 		return err
 	}
 	// encode MaxPriorityFeePerGas
@@ -291,11 +291,11 @@ func (tx *SetCodeTransaction) encodePayload(w io.Writer, b []byte, payloadSize, 
 		return err
 	}
 	// encode Gas
-	if err := rlp.EncodeInt(tx.Gas, w, b); err != nil {
+	if err := rlp2.EncodeInt(tx.Gas, w, b); err != nil {
 		return err
 	}
 	// encode To
-	if err := rlp.EncodeOptionalAddress(tx.To, w, b); err != nil {
+	if err := rlp2.EncodeOptionalAddress(tx.To, w, b); err != nil {
 		return err
 	}
 	// encode Value
@@ -303,7 +303,7 @@ func (tx *SetCodeTransaction) encodePayload(w io.Writer, b []byte, payloadSize, 
 		return err
 	}
 	// encode Data
-	if err := rlp.EncodeString(tx.Data, w, b); err != nil {
+	if err := rlp2.EncodeStringToWriter(tx.Data, w, b); err != nil {
 		return err
 	}
 	// prefix
