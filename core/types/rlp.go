@@ -886,53 +886,20 @@ func (bb *Block) DecodeRLP(s *rlp.Stream) error {
 Log RLP encoding/decoding
 =================================== */
 
-func (l *Log) payloadSize() (payloadSize, topicsLen int) {
-	payloadSize += 21              // Address  + prefix
-	topicsLen = len(l.Topics) * 33 // each hash = 32 byte long + 1 prefix
-	payloadSize += rlp2.ListPrefixLen(topicsLen) + topicsLen
-	payloadSize += rlp2.StringLen(l.Data)
-	return
-}
-
-// func (l *Log) EncodingSize() int {
-
-// }
-
 // EncodeRLP serializes b into the Ethereum RLP block format.
 func (l *Log) encodeRLP(w io.Writer) error {
-	payloadSize, topicsLen := l.payloadSize()
-	var b [33]byte
-	// prefix
-	if err := EncodeStructSizePrefix(payloadSize, w, b[:]); err != nil {
-		return err
-	}
-	// encode address
-	b[0] = 128 + 20
-	if _, err := w.Write(b[:1]); err != nil {
-		return err
-	}
-	if _, err := w.Write(l.Address[:]); err != nil {
-		return err
-	}
-	// encode topics
-	if err := EncodeStructSizePrefix(topicsLen, w, b[:]); err != nil {
-		return err
-	}
-	b[0] = 128 + 32
-	for _, h := range l.Topics {
-		if _, err := w.Write(b[:1]); err != nil {
-			return err
-		}
-		if _, err := w.Write(h[:]); err != nil {
-			return err
-		}
-	}
+	buf := encBufferPool.Get().(*encBuffer)
+	defer encBufferPool.Put(buf)
+	buf.reset()
 
-	// encode data
-	if err := rlp2.EncodeStringToWriter(l.Data, w, b[:]); err != nil {
+	list, payloadSize := l.rlpHeader()
+	buf.encodeHeader(list, payloadSize)
+	buf.encodeBytes(l.Address[:])
+	buf.encodeSliceOfHashes(l.Topics)
+	buf.encodeBytes(l.Data)
+	if _, err := buf.flush(w); err != nil {
 		return err
 	}
-
 	return nil
 }
 

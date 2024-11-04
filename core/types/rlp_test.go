@@ -32,7 +32,7 @@ import (
 	"github.com/erigontech/erigon/rlp"
 )
 
-const RUNS = 100 // for local tests increase this number
+const RUNS = 100000 // for local tests increase this number
 
 type TRand struct {
 	rnd *rand.Rand
@@ -497,6 +497,84 @@ func compareReceiptForStorage(t *testing.T, a, b *ReceiptForStorage) error {
 	return nil
 }
 
+func TestHeaderEncodeDecodeRLP(t *testing.T) {
+	tr := NewTRand()
+	var buf bytes.Buffer
+	for i := 0; i < RUNS; i++ {
+		enc := tr.RandHeader()
+		buf.Reset()
+		if err := enc.EncodeRLP(&buf); err != nil {
+			t.Errorf("error: Header.EncodeRLP(): %v", err)
+		}
+
+		s := rlp.NewStream(bytes.NewReader(buf.Bytes()), 0)
+		dec := &Header{}
+		if err := dec.DecodeRLP(s); err != nil {
+			t.Errorf("error: Header.DecodeRLP(): %v", err)
+			panic(err)
+		}
+
+		checkHeaders(t, enc, dec)
+
+		buf.Reset()
+		if err := enc.encodeRLP(&buf); err != nil {
+			t.Errorf("error: Header.EncodeRLP(): %v", err)
+		}
+
+		s = rlp.NewStream(bytes.NewReader(buf.Bytes()), 0)
+		dec = &Header{}
+		if err := dec.DecodeRLP(s); err != nil {
+			t.Errorf("error: Header.DecodeRLP(): %v", err)
+			panic(err)
+		}
+
+		checkHeaders(t, enc, dec)
+	}
+}
+
+var u64 uint64 = 32_000_000_000
+var i64 int64 = 99_000_000_000
+var _header = Header{
+	ParentHash:            libcommon.Hash{87, 162, 92, 89, 172, 8, 108, 225, 84, 156, 151, 93, 61, 163, 162, 140, 13, 22, 209, 203, 109, 57, 255, 143, 113, 245, 135, 168, 127, 60, 3, 59},
+	UncleHash:             libcommon.Hash{228, 239, 67, 201, 138, 239, 72, 45, 20, 82, 164, 20, 167, 246, 190, 2, 197, 150, 18, 106, 146, 23, 147, 172, 214, 90, 111, 101, 104, 58, 29, 208},
+	Coinbase:              libcommon.Address{230, 134, 77, 144, 180, 123, 159, 183, 208, 82, 30, 106, 118, 207, 212, 17, 231, 115, 237, 238},
+	Root:                  libcommon.Hash{126, 205, 170, 86, 94, 146, 217, 111, 87, 47, 39, 175, 138, 169, 174, 123, 158, 14, 241, 176, 56, 82, 247, 35, 122, 99, 233, 39, 160, 220, 119, 22},
+	TxHash:                libcommon.Hash{230, 101, 204, 161, 125, 201, 189, 245, 85, 73, 58, 78, 199, 220, 174, 219, 106, 7, 86, 184, 244, 211, 161, 92, 177, 14, 136, 90, 7, 92, 112, 151},
+	ReceiptHash:           libcommon.Hash{94, 32, 73, 34, 109, 156, 27, 115, 135, 174, 167, 244, 205, 189, 2, 23, 28, 138, 238, 57, 122, 241, 109, 155, 199, 129, 22, 185, 103, 203, 135, 244},
+	Bloom:                 Bloom{120, 26, 88, 51, 127, 151, 224, 91, 252, 24, 233, 5, 45, 44, 216, 90, 137, 212, 77, 203, 62, 240, 126, 187, 8, 148, 82, 184, 66, 48, 38, 232, 77, 110, 66, 180, 115, 59, 195, 80, 158, 39, 52, 72, 112, 142, 167, 43, 67, 140, 233, 88, 88, 36, 120, 250, 191, 214, 246, 102, 24, 157, 157, 222, 57, 105, 211, 84, 67, 248, 113, 116, 191, 187, 133, 84, 208, 172, 20, 80, 76, 28, 43, 226, 3, 70, 207, 164, 77, 105, 172, 2, 123, 241, 39, 106, 171, 89, 34, 16, 25, 30, 80, 248, 241, 25, 115, 203, 223, 241, 70, 247, 22, 38, 27, 184, 6, 50, 43, 108, 131, 14, 41, 183, 247, 23, 191, 178, 18, 191, 221, 75, 47, 22, 198, 143, 6, 196, 170, 110, 21, 164, 53, 58, 82, 171, 42, 8, 224, 83, 74, 24, 69, 175, 116, 190, 89, 232, 255, 222, 118, 130, 85, 242, 238, 17, 122, 49, 134, 62, 26, 52, 227, 45, 246, 245, 6, 26, 102, 18, 78, 159, 194, 31, 59, 80, 165, 165, 44, 144, 120, 21, 255, 57, 2, 215, 183, 111, 128, 252, 233, 228, 60, 56, 248, 178, 211, 12, 191, 253, 144, 113, 20, 236, 10, 13, 65, 188, 186, 177, 45, 174, 33, 167, 147, 150, 50, 173, 195, 43, 218, 143, 163, 130, 125, 69, 251, 210, 205, 227, 174, 16, 104, 212, 28, 15, 45, 135, 116, 37, 30, 108, 17, 100, 107, 146},
+	Difficulty:            new(big.Int).SetInt64(i64),
+	Number:                new(big.Int).SetInt64(i64),
+	GasLimit:              u64,
+	GasUsed:               u64,
+	Time:                  u64,
+	Extra:                 []byte{249, 206, 22, 255, 27, 60, 111, 151, 15, 155, 182, 136, 64, 174, 37, 185, 224, 120, 193, 75, 106, 237, 73, 155, 122, 108, 162, 31, 206, 88, 247, 240, 214, 179, 91, 223, 241, 192, 46, 0, 20, 213, 72, 130, 130, 61, 36, 252, 193, 241, 6, 214, 231, 44, 36, 153, 155, 232, 242, 121, 42, 203, 197, 76, 181, 249, 16, 237, 205, 109, 72, 198, 207, 18, 72, 107, 106, 219, 139, 30, 148, 104, 101, 163, 244, 83, 75, 21, 160, 156, 82, 139, 26, 53, 128, 19, 234, 177, 210, 245, 220, 201, 110, 8, 38, 107, 245, 227, 6, 115, 234, 20, 252, 145, 51, 79, 150, 163, 78, 52, 184, 6, 186, 201, 229, 161, 158, 241, 39, 199, 118, 87, 76, 22, 177, 46, 116, 25, 102, 151, 49, 149, 96, 40, 126, 19, 105, 90, 165, 245, 22, 220, 50, 124, 2, 148, 3, 47, 224, 53, 102, 95, 95, 144, 42, 65, 155, 165, 34, 66, 196, 176, 129, 177, 199, 2, 104, 80, 101, 134, 197, 13, 255, 22, 80, 26, 163, 169, 201, 34, 232, 42, 234, 116, 125, 125, 109, 242, 186, 148, 108, 118, 124, 51, 58, 94, 5, 136, 53, 150, 74, 227, 172, 31, 210, 122, 168, 50, 62, 117, 74, 53, 14, 30, 194, 123, 196, 30, 123, 183, 226, 158, 81, 126, 44, 182, 253, 143, 88, 2, 77, 117, 208, 4, 100, 224, 136, 83, 226, 239, 241, 150, 143, 94, 138, 216},
+	MixDigest:             libcommon.Hash{100, 143, 63, 205, 42, 111, 112, 207, 91, 196, 68, 169, 70, 51, 44, 25, 187, 220, 137, 71, 78, 51, 72, 28, 39, 230, 254, 168, 245, 155, 153, 5},
+	Nonce:                 BlockNonce([]byte{10, 11, 205, 7, 188, 68, 77, 34}),
+	BaseFee:               new(big.Int).SetInt64(i64),
+	WithdrawalsHash:       &libcommon.Hash{204, 142, 42, 56, 12, 141, 119, 104, 98, 3, 2, 22, 29, 124, 213, 75, 33, 136, 34, 199, 88, 172, 206, 1, 136, 66, 109, 95, 242, 18, 219, 170},
+	BlobGasUsed:           &u64,
+	ExcessBlobGas:         &u64,
+	ParentBeaconBlockRoot: &libcommon.Hash{96, 140, 187, 180, 230, 154, 43, 69, 214, 213, 72, 246, 19, 184, 109, 8, 37, 250, 132, 187, 234, 128, 208, 241, 244, 48, 224, 28, 98, 6, 220, 58},
+}
+
+func BenchmarkHeaderEncodeRLP(b *testing.B) {
+	var buf bytes.Buffer
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		buf.Reset()
+		_header.encodeRLP(&buf)
+	}
+}
+
+func BenchmarkHeaderEncodeRLPold(b *testing.B) {
+	var buf bytes.Buffer
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		buf.Reset()
+		_header.EncodeRLP(&buf)
+	}
+}
+
 // func TestRawBodyEncodeDecodeRLP(t *testing.T) {
 // 	tr := NewTRand()
 // 	var buf bytes.Buffer
@@ -550,7 +628,7 @@ func TestLogEncodeDecodeRLP(t *testing.T) {
 	for i := 0; i < RUNS; i++ {
 		enc := tr.RandLog()
 		buf.Reset()
-		if err := enc.encodeRLP(&buf); err != nil {
+		if err := enc._encodeRLP(&buf); err != nil {
 			t.Errorf("error: Log.EncodeRLP(): %v", err)
 		}
 
@@ -582,7 +660,7 @@ func BenchmarkLogEncodeRLP(b *testing.B) {
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		buf.Reset()
-		_log.encodeRLP(&buf)
+		_log._encodeRLP(&buf)
 	}
 }
 
