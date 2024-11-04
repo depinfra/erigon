@@ -897,10 +897,8 @@ func (l *Log) encodeRLP(w io.Writer) error {
 	buf.encodeBytes(l.Address[:])
 	buf.encodeSliceOfHashes(l.Topics)
 	buf.encodeBytes(l.Data)
-	if _, err := buf.flush(w); err != nil {
-		return err
-	}
-	return nil
+
+	return buf.flush(w)
 }
 
 func (l *Log) decodeRLP(s *rlp.Stream) error {

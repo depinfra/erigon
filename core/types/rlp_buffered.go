@@ -20,7 +20,7 @@ var (
 	hashLenghWithPrefix = 33
 	addrLenghWithPrefix = 21
 
-	bitsShift = []int{0, 0, 8, 16, 24, 32, 40, 48, 56} // if number can be respresented with 1 byte, shift nothing, if with 2 bytes shift 8 bits, if 3 bytes -> 16, 4 -> 24, and so on
+	bitsShift = []int{0, 0, 8, 16, 24, 32, 40, 48, 56} // if number can be respresented with 1 byte then shift nothing, if with 2 bytes shift 8 bits, if 3 bytes -> 16, 4 -> 24, and so on
 )
 
 type encBuffer struct {
@@ -35,6 +35,13 @@ var encBufferPool = sync.Pool{
 func (buf *encBuffer) reset() {
 	buf.str = buf.str[:0]
 	buf.size = 0
+}
+
+func (buf *encBuffer) flush(w io.Writer) error {
+	if _, err := w.Write(buf.str); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (buf *encBuffer) append(b byte) {
@@ -55,20 +62,39 @@ func (buf *encBuffer) encodeHeader(list bool, payloadSize int) {
 		} else {
 			prefix = emptyStringCode
 		}
-		buf.append(prefix + byte(payloadSize))
+		// buf.append(prefix + byte(payloadSize))
+		buf.str = append(buf.str, prefix+byte(payloadSize))
+		buf.size++
 	} else {
-		byteLen := libcommon.BitLenToByteLen(bits.Len64(uint64(payloadSize)))
+		size := libcommon.BitLenToByteLen(bits.Len64(uint64(payloadSize)))
 		if list {
 			prefix = 0xF7
 		} else {
 			prefix = 0xB7
 		}
-		buf.append(prefix + byte(byteLen))
-		n := bitsShift[byteLen]
-		for n >= 0 {
-			buf.append(byte(payloadSize >> n))
-			n -= 8
-		}
+		// buf.append(prefix + byte(size))
+		buf.str = append(buf.str, prefix+byte(size))
+		// buf.size++
+		// n := bitsShift[size]
+		// for n >= 0 {
+		// 	// buf.append(byte(payloadSize >> n))
+		// 	buf.str = append(buf.str, byte(payloadSize>>n))
+		// 	// buf.size++
+		// 	n -= 8
+		// }
+
+		a := make([]byte, 8)
+		a[0] = byte(payloadSize >> 56)
+		a[1] = byte(payloadSize >> 48)
+		a[2] = byte(payloadSize >> 40)
+		a[3] = byte(payloadSize >> 32)
+		a[4] = byte(payloadSize >> 24)
+		a[5] = byte(payloadSize >> 16)
+		a[6] = byte(payloadSize >> 8)
+		a[7] = byte(payloadSize)
+		buf.str = append(buf.str, a[8-size:]...)
+
+		buf.size += size + 1
 	}
 }
 
@@ -76,34 +102,48 @@ func (buf *encBuffer) encodeBigInt(i *big.Int) {
 	bitLen := i.BitLen() // treat nil as 0
 	if bitLen < 8 {
 		if bitLen > 0 {
-			buf.append(byte(i.Uint64()))
+			// buf.append(byte(i.Uint64()))
+			buf.str = append(buf.str, byte(i.Uint64()))
+			buf.size++
 		} else {
-			buf.append(0x80)
+			// buf.append(0x80)
+			buf.str = append(buf.str, 0x80)
+			buf.size++
 		}
 	}
 
 	size := common.BitLenToByteLen(bitLen)
-	buf.append(0x80 + byte(size))
-	for i := 0; i < size; i++ { // allocate 0s in buffer
-		buf.append(0)
-	}
+	// buf.append(0x80 + byte(size))
+	buf.str = append(buf.str, 0x80+byte(size))
+	buf.str = append(buf.str, make([]byte, size)...)
+	buf.size += size + 1
 	i.FillBytes(buf.str[buf.size-size : buf.size])
 }
 
 func (buf *encBuffer) encodeInt(i uint64) {
 	if 0 < i && i < 0x80 {
-		buf.append(byte(i))
+		// buf.append(byte(i))
+		buf.str = append(buf.str, byte(i))
+		buf.size++
 		return
 	}
 
 	size := common.BitLenToByteLen(bits.Len64(i))
-	buf.append(0x80 + byte(size))
+	// buf.append(0x80 + byte(size))
+	buf.str = append(buf.str, 0x80+byte(size))
 
-	n := bitsShift[size]
-	for n >= 0 {
-		buf.append(byte(i >> n))
-		n -= 8
-	}
+	a := make([]byte, 8)
+	a[0] = byte(i >> 56)
+	a[1] = byte(i >> 48)
+	a[2] = byte(i >> 40)
+	a[3] = byte(i >> 32)
+	a[4] = byte(i >> 24)
+	a[5] = byte(i >> 16)
+	a[6] = byte(i >> 8)
+	a[7] = byte(i)
+
+	buf.str = append(buf.str, a[8-size:]...)
+	buf.size += size + 1
 }
 
 func (buf *encBuffer) encodeBytes(src []byte) {
@@ -122,10 +162,6 @@ func (buf *encBuffer) encodeSliceOfHashes(src []libcommon.Hash) (idx int) {
 		buf.encodeBytes(src[i][:])
 	}
 	return
-}
-
-func (buf *encBuffer) flush(w io.Writer) (int, error) {
-	return w.Write(buf.str[:buf.size])
 }
 
 /* 	===============================
@@ -257,11 +293,7 @@ func (h *Header) encodeRLP(w io.Writer) error {
 		// TODO(racytech)
 	}
 
-	if _, err := buf.flush(w); err != nil {
-		return err
-	}
-
-	return nil
+	return buf.flush(w)
 }
 
 /* 	===============================
@@ -287,8 +319,6 @@ func (l *Log) _encodeRLP(w io.Writer) error {
 	buf.encodeBytes(l.Address[:])
 	buf.encodeSliceOfHashes(l.Topics)
 	buf.encodeBytes(l.Data)
-	if _, err := buf.flush(w); err != nil {
-		return err
-	}
-	return nil
+
+	return buf.flush(w)
 }

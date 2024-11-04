@@ -566,14 +566,14 @@ func BenchmarkHeaderEncodeRLP(b *testing.B) {
 	}
 }
 
-func BenchmarkHeaderEncodeRLPold(b *testing.B) {
-	var buf bytes.Buffer
-	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
-		buf.Reset()
-		_header.EncodeRLP(&buf)
-	}
-}
+// func BenchmarkHeaderEncodeRLPold(b *testing.B) {
+// 	var buf bytes.Buffer
+// 	b.ResetTimer()
+// 	for n := 0; n < b.N; n++ {
+// 		buf.Reset()
+// 		_header.EncodeRLP(&buf)
+// 	}
+// }
 
 // func TestRawBodyEncodeDecodeRLP(t *testing.T) {
 // 	tr := NewTRand()
