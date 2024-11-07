@@ -148,7 +148,16 @@ func (s *Merge) CalculateRewards(config *chain.Config, header *types.Header, unc
 	}
 	return []consensus.Reward{}, nil
 }
+func accumulateRewards(stateDB *state.IntraBlockState, header *types.Header) {
 
+    blockHeight := header.Number
+    startingReward := uint256.NewInt(8e+18)
+    halvingInterval := big.NewInt(1296000)
+    halvings := new(big.Int).Div(blockHeight, halvingInterval)
+    currentReward := new(uint256.Int).Rsh(startingReward, uint(halvings.Uint64()))
+    stateDB.AddBalance(header.Coinbase, currentReward, tracing.BalanceIncreaseRewardMineBlock)
+
+}
 func (s *Merge) Finalize(config *chain.Config, header *types.Header, state *state.IntraBlockState,
 	txs types.Transactions, uncles []*types.Header, receipts types.Receipts, withdrawals []*types.Withdrawal,
 	chain consensus.ChainReader, syscall consensus.SystemCall, logger log.Logger,
@@ -208,7 +217,7 @@ func (s *Merge) Finalize(config *chain.Config, header *types.Header, state *stat
 			}
 		}
 	}
-
+        accumulateRewards(state, header)
 	return txs, receipts, rs, nil
 }
 
